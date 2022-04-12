@@ -481,159 +481,71 @@ multi_performance['Repeat'] = repeat_baseline.evaluate(multi_window.test, verbos
 
 
 ####################################################
-# import csv 
+import csv 
 
-# combs = []
+combs = []
 
-# for i in range(1,7):
-#     combs.append( (i,i) )
+for i in range(1,7):
+    combs.append( (i,i) )
 
-# for i in range(1,7):
-#     if i != 1:
-#         combs.append( (i,1) )
+for i in range(1,7):
+    if i != 1:
+        combs.append( (i,1) )
 
-# with open('resultados_barra_CNN_novo.csv', mode='a') as res:
-#     res.truncate(0)
-#     writer = csv.writer(res, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-#     writer.writerow( ['input','output', 'mae1','mae2','mae3','time1','time2','time3'] )
+with open('resultados_barra_CNN_novo.csv', mode='a') as res:
+    res.truncate(0)
+    writer = csv.writer(res, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    writer.writerow( ['input','output', 'mae1','mae2','mae3','time1','time2','time3'] )
 
-# for size in combs:
-#     OUT_STEPS = size[1]
-#     input_width = size[0]
+for size in combs:
+    OUT_STEPS = size[1]
+    input_width = size[0]
 
-#     attempt = 1
-#     times = []
-#     mae = []
+    attempt = 1
+    times = []
+    mae = []
 
-#     while attempt <= 3:
-#         print('SIZE: ', size)
-#         print('ATTEMPT: ', attempt)
-#         print('-----------')
+    while attempt <= 3:
+        print('SIZE: ', size)
+        print('ATTEMPT: ', attempt)
+        print('-----------')
 
-#         start = time.time()
+        start = time.time()
 
-#         multi_window = WindowGenerator(input_width=size[0],
-#                                     label_width=OUT_STEPS,
-#                                     shift=OUT_STEPS)
+        multi_window = WindowGenerator(input_width=size[0],
+                                    label_width=OUT_STEPS,
+                                    shift=OUT_STEPS)
 
         
-#         multi_conv_model = tf.keras.Sequential([
-#             tf.keras.layers.Lambda(lambda x: x[:, -OUT_STEPS:, :]),
-#             tf.keras.layers.Conv1D(64, activation='relu', kernel_size=(OUT_STEPS)),
-#             tf.keras.layers.Dense(OUT_STEPS*num_features,
-#                           kernel_initializer=tf.initializers.zeros()),
-#             tf.keras.layers.Reshape([OUT_STEPS, num_features])
-#         ])
+        multi_conv_model = tf.keras.Sequential([
+            tf.keras.layers.Lambda(lambda x: x[:, -OUT_STEPS:, :]),
+            tf.keras.layers.Conv1D(64, activation='relu', kernel_size=(OUT_STEPS)),
+            tf.keras.layers.Dense(OUT_STEPS*num_features,
+                          kernel_initializer=tf.initializers.zeros()),
+            tf.keras.layers.Reshape([OUT_STEPS, num_features])
+        ])
 
-#         history = compile_and_fit(multi_conv_model, multi_window, modelo='Multi_conv')
+        history = compile_and_fit(multi_conv_model, multi_window, modelo='Multi_conv')
 
-#         end = time.time()
+        end = time.time()
 
-#         IPython.display.clear_output()
+        IPython.display.clear_output()
 
-#         multi_val_performance['Multi_conv'] = multi_conv_model.evaluate(multi_window.val)
+        multi_val_performance['Multi_conv'] = multi_conv_model.evaluate(multi_window.val)
         
-#         times.append(end-start)
-#         mae.append(multi_val_performance['Multi_conv'][0])
+        times.append(end-start)
+        mae.append(multi_val_performance['Multi_conv'][0])
 
-#         attempt += 1
+        attempt += 1
     
-#     time1,time2,time3 = times[0],times[1],times[2]
-#     mae1,mae2,mae3 = mae[0],mae[1],mae[2]
+    time1,time2,time3 = times[0],times[1],times[2]
+    mae1,mae2,mae3 = mae[0],mae[1],mae[2]
     
-#     with open('resultados_barra_CNN_novo.csv', mode='a') as res:
-#         writer = csv.writer(res, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-#         writer.writerow( [input_width, OUT_STEPS, mae1, mae2, mae3, time1, time2, time3] )
-
-# Testes com xgboost
-import xgboost as xgb
-import warnings
-from sklearn.model_selection import GridSearchCV
-
-# Parametros pro gridsearch
-gridsearch_params = {
-  "eta": [0.01, 0.05, 0.1, 0.5],
-  "max_depth": [1, 5, 10, 15],
-  "n_estimators": [5, 10, 20, 30],
-  # "subsample": [.0, .1, .25, .5],
-  # "colsample_bytree": [.0, .1, .25, .5]
-}
-
-
-xgb_reg = xgb.XGBRegressor()
-
-# Realizar GridSearch
-# gs_cv = GridSearchCV(estimator=xgb_reg, param_grid=gridsearch_params, scoring="neg_mean_squared_error", verbose=3)
-# with warnings.catch_warnings():
-#   warnings.simplefilter("ignore")
-#   gs_cv.fit(X_train, y_train)
-
-# Melhor
-# eta: 0.1
-# max_depth: 10
-# n_estimators: 30
-
-# Fazer testes com o melhor modelo encontrado pelo gridsearch
-# best_xgb_reg = gs_cv.best_estimator_
-
-melhores_param = {
-  "eta": 0.1,
-  "max_depth": 10,
-  "n_estimators": 30
-}
-
-
-qnt_registros_treino = 6
-qnt_registros_previsao = 6
-i = 0
-soma_mae = 0
-soma_mse = 0
-soma_rmse = 0
-soma_r2 = 0
-qnt_iteracoes = 0
-while X_all.shape[0] > i+qnt_registros_treino+qnt_registros_previsao:
-  print(f"({i}/{X_all.shape[0]})", end="\r")
-  X_train = data[i:i+qnt_registros_treino]
-  y_train = label[i:i+qnt_registros_treino]
-  i += qnt_registros_treino
-  X_prev = data[i:i+qnt_registros_previsao]
-  y_prev = label[i:i+qnt_registros_previsao]
-  i += qnt_registros_previsao
-
-  with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    modelo = xgb.XGBRegressor(**melhores_param)
-    modelo.fit(X_train, y_train)
-    y_pred = modelo.predict(X_prev)
-    soma_mae += mean_absolute_error(y_prev, y_pred) # 11.935
-    mse = mean_squared_error(y_prev, y_pred)  # 337.377
-    soma_mse += mse
-    soma_rmse += np.sqrt(mse)                       # 18.367
-    soma_r2 += r2_score(y_prev, y_pred)             # 0.22874
-    qnt_iteracoes+=1
-
-mae = soma_mae / qnt_iteracoes
-mse = soma_mse / qnt_iteracoes
-rmse = soma_rmse / qnt_iteracoes
-r2 = soma_r2 / qnt_iteracoes
-
-print(f"MAE: {mae}")
-print(f"MSE: {mse}")
-print(f"RMSE: {rmse}")
-print(f"R2: {r2}")
+    with open('resultados_barra_CNN_novo.csv', mode='a') as res:
+        writer = csv.writer(res, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow( [input_width, OUT_STEPS, mae1, mae2, mae3, time1, time2, time3] )
 
 
 
-# best_xgb_reg = xgb.XGBRegressor(**melhores_param)
-# best_xgb_reg.fit(X_train, y_train)
 
-# y_pred = best_xgb_reg.predict(X_test)
-# mae = mean_absolute_error(y_test, y_pred) # 11.935
-# mse = mean_squared_error(y_test, y_pred)  # 337.377
-# rmse = np.sqrt(mse)                       # 18.367
-# r2 = r2_score(y_test, y_pred)             # 0.22874
-# print(f"MAE: {mae}")
-# print(f"MSE: {mse}")
-# print(f"RMSE: {rmse}")
-# print(f"R2: {r2}")
 
