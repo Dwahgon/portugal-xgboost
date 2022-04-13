@@ -1,7 +1,9 @@
+from statistics import mean
 import time 
 import os
 import datetime
 import IPython
+import xgboost
 import IPython.display
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -406,19 +408,18 @@ wide_window = WindowGenerator(
 
 MAX_EPOCHS = 150
 
-def compile_and_fit(model, window, modelo, patience=3):
+def compile_and_fit(model: xgboost.XGBRegressor, window, modelo, patience=3):
   early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss',
                                                     patience=patience,
                                                     mode='min')
 
-  model.compile(loss=tf.losses.MeanAbsoluteError(),
-                optimizer=tf.optimizers.RMSprop(),
-                metrics=[tf.metrics.MeanAbsoluteError()])
+  # model.compile(loss=tf.losses.MeanAbsoluteError(),
+  #               optimizer=tf.optimizers.RMSprop(),
+  #               metrics=[tf.metrics.MeanAbsoluteError()])
   
   log_dir = "./logs/Logs_TensorBoard_Wit/Neural_jan_2022/" +  modelo +  '_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-  history = model.fit(window.train, epochs=MAX_EPOCHS,
-                      batch_size=32,
-                      validation_data=window.val,
+  
+  history = model.fit(*window.train,
                       callbacks=[early_stopping,tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)])
   return history
 
@@ -497,55 +498,84 @@ with open('resultados_barra_CNN_novo.csv', mode='a') as res:
     writer = csv.writer(res, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     writer.writerow( ['input','output', 'mae1','mae2','mae3','time1','time2','time3'] )
 
-for size in combs:
-    OUT_STEPS = size[1]
-    input_width = size[0]
+# for size in combs:
+#     OUT_STEPS = size[1]
+#     input_width = size[0]
 
-    attempt = 1
-    times = []
-    mae = []
+#     attempt = 1
+#     times = []
+#     mae = []
 
-    while attempt <= 3:
-        print('SIZE: ', size)
-        print('ATTEMPT: ', attempt)
-        print('-----------')
+#     while attempt <= 3:
+#         print('SIZE: ', size)
+#         print('ATTEMPT: ', attempt)
+#         print('-----------')
 
-        start = time.time()
+#         start = time.time()
 
-        multi_window = WindowGenerator(input_width=size[0],
-                                    label_width=OUT_STEPS,
-                                    shift=OUT_STEPS)
+#         multi_window = WindowGenerator(input_width=size[0],
+#                                     label_width=OUT_STEPS,
+#                                     shift=OUT_STEPS)
 
         
-        multi_conv_model = tf.keras.Sequential([
-            tf.keras.layers.Lambda(lambda x: x[:, -OUT_STEPS:, :]),
-            tf.keras.layers.Conv1D(64, activation='relu', kernel_size=(OUT_STEPS)),
-            tf.keras.layers.Dense(OUT_STEPS*num_features,
-                          kernel_initializer=tf.initializers.zeros()),
-            tf.keras.layers.Reshape([OUT_STEPS, num_features])
-        ])
+#         # multi_conv_model = tf.keras.Sequential([
+#         #     tf.keras.layers.Lambda(lambda x: x[:, -OUT_STEPS:, :]),
+#         #     tf.keras.layers.Conv1D(64, activation='relu', kernel_size=(OUT_STEPS)),
+#         #     tf.keras.layers.Dense(OUT_STEPS*num_features,
+#         #                   kernel_initializer=tf.initializers.zeros()),
+#         #     tf.keras.layers.Reshape([OUT_STEPS, num_features])
+#         # ])
+#         xgb_model = xgboost.XGBRegressor(eval_metric="mae")
 
-        history = compile_and_fit(multi_conv_model, multi_window, modelo='Multi_conv')
+#         while True:
+#           ds = np.array(multi_window.train)
+#           if ds is None:
+#             break
 
-        end = time.time()
+#         # history = compile_and_fit(xgb_model, multi_window, modelo='XGBoost')
 
-        IPython.display.clear_output()
+#         end = time.time()
 
-        multi_val_performance['Multi_conv'] = multi_conv_model.evaluate(multi_window.val)
+#         IPython.display.clear_output()
+
+#         multi_val_performance['XGBoost'] = xgb_model.predict(multi_window.val)
         
-        times.append(end-start)
-        mae.append(multi_val_performance['Multi_conv'][0])
+#         times.append(end-start)
+#         mae.append(multi_val_performance['XGBoost'])
 
-        attempt += 1
+#         attempt += 1
     
-    time1,time2,time3 = times[0],times[1],times[2]
-    mae1,mae2,mae3 = mae[0],mae[1],mae[2]
+#     time1,time2,time3 = times[0],times[1],times[2]
+#     mae1,mae2,mae3 = mae[0],mae[1],mae[2]
     
-    with open('resultados_barra_CNN_novo.csv', mode='a') as res:
-        writer = csv.writer(res, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        writer.writerow( [input_width, OUT_STEPS, mae1, mae2, mae3, time1, time2, time3] )
+#     with open('resultados_barra_CNN_novo.csv', mode='a') as res:
+#         writer = csv.writer(res, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+#         writer.writerow( [input_width, OUT_STEPS, mae1, mae2, mae3, time1, time2, time3] )
 
 
+train_df = X_all[0:int(n*0.7)]
+val_df = X_all[int(n*0.7):int(n*0.9)]
+test_df = X_all[int(n*0.9):]
 
+X_train = data[0:int(n*0.7)]
+y_train = label[0:int(n*0.7)]
+X_val = data[int(n*0.7):int(n*0.9)]
+y_val = label[int(n*0.7):int(n*0.9)]
+X_teste = data[int(n*0.9):]
+y_teste = label[int(n*0.9):]
+
+STEP_SIZE = 6
+i_train = 0
+classificador = xgboost.XGBRegressor()
+while i_train < X_train.shape[0]:
+  classificador.fit(X_train[i_train: i_train+STEP_SIZE], y_train[i_train: i_train+STEP_SIZE], xgb_model=classificador.booster)
+  i_val = 0
+  scores = []
+  while i_val < X_val.shape[0] / 10:
+      scores.append(mean_absolute_error(y_val[i_val: i_val+STEP_SIZE], classificador.predict(X_val[i_val: i_val+STEP_SIZE])))
+      i_val+=STEP_SIZE
+  print(mean(scores))
+  print(i_train)
+  i_train += STEP_SIZE
 
 
