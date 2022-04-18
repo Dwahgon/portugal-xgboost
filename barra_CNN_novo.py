@@ -568,14 +568,10 @@ STEP_SIZE = 6
 i_train = 0
 classificador = xgboost.XGBRegressor()
 while i_train < X_train.shape[0]:
-  classificador.fit(X_train[i_train: i_train+STEP_SIZE], y_train[i_train: i_train+STEP_SIZE], xgb_model=classificador.booster)
-  i_val = 0
-  scores = []
-  while i_val < X_val.shape[0] / 10:
-      scores.append(mean_absolute_error(y_val[i_val: i_val+STEP_SIZE], classificador.predict(X_val[i_val: i_val+STEP_SIZE])))
-      i_val+=STEP_SIZE
-  print(mean(scores))
-  print(i_train)
-  i_train += STEP_SIZE
+  ultimo_indice = i_train + STEP_SIZE
+  if ultimo_indice >= X_train.shape[0]:
+    ultimo_indice = X_train.shape[0] - 1
+  classificador.fit(X_train[i_train:ultimo_indice], y_train[i_train:ultimo_indice], xgb_model=classificador.booster)
+  i_train = ultimo_indice + 1
 
 
