@@ -1,4 +1,5 @@
 from statistics import mean
+import sys
 import time 
 import os
 import datetime
@@ -553,9 +554,9 @@ with open('resultados_barra_CNN_novo.csv', mode='a') as res:
 #         writer.writerow( [input_width, OUT_STEPS, mae1, mae2, mae3, time1, time2, time3] )
 
 
-train_df = X_all[0:int(n*0.7)]
-val_df = X_all[int(n*0.7):int(n*0.9)]
-test_df = X_all[int(n*0.9):]
+# train_df = X_all[0:int(n*0.7)]
+# val_df = X_all[int(n*0.7):int(n*0.9)]
+# test_df = X_all[int(n*0.9):]
 
 X_train = data[0:int(n*0.7)]
 y_train = label[0:int(n*0.7)]
@@ -564,14 +565,63 @@ y_val = label[int(n*0.7):int(n*0.9)]
 X_teste = data[int(n*0.9):]
 y_teste = label[int(n*0.9):]
 
+parametros = {
+  "eta": float(sys.argv[1]),
+  "max_depth": int(sys.argv[2]),
+}
+print("="*100)
+print(str(parametros))
+
 STEP_SIZE = 6
 i_train = 0
 classificador = xgboost.XGBRegressor()
+tempo_inicio = time.time()
 while i_train < X_train.shape[0]:
+  print(f"{i_train}/{X_train.shape[0]}", end="\r")
   ultimo_indice = i_train + STEP_SIZE
   if ultimo_indice >= X_train.shape[0]:
     ultimo_indice = X_train.shape[0] - 1
   classificador.fit(X_train[i_train:ultimo_indice], y_train[i_train:ultimo_indice], xgb_model=classificador.booster)
   i_train = ultimo_indice + 1
+tempo_execucao = time.time() - tempo_inicio
 
+print(f"TEMPO TREINAMENTO: {tempo_execucao} s")
 
+def resultados(modelo, conjunto_X, conjunto_y):
+  tempo_inicio = time.time()
+  y_pred = modelo.predict(conjunto_X)
+  mae = mean_absolute_error(conjunto_y, y_pred) # 11.935
+  mse = mean_squared_error(conjunto_y, y_pred)  # 337.377
+  rmse = np.sqrt(mse)                       # 18.367
+  r2 = r2_score(conjunto_y, y_pred)             # 0.22874
+  tempo_teste = time.time() - tempo_inicio
+
+  print(f"MAE: {mae}")
+  print(f"MSE: {mse}")
+  print(f"RMSE: {rmse}")
+  print(f"R2: {r2}")
+  print(f"TEMPO TESTE: {tempo_teste} s")
+
+print("Validação")
+resultados(classificador, X_val, y_val)
+print("Teste")
+resultados(classificador, X_teste, y_teste)
+
+# eta .1
+# max_depth 5
+
+# TEMPO TREINAMENTO: 1785.8655042648315 s
+# Validação
+# MAE: 10.612743684704046
+# MSE: 278.5489072370256
+# RMSE: 16.689784517393434
+# R2: -0.027206332281904277
+# TEMPO TESTE: 0.026966094970703125 s
+# Teste
+# /media/data/udesc/ic/Portugal/.env/lib/python3.10/site-packages/xgboost/data.py:262: FutureWarning: pandas.Int64Index is deprecated and will be removed from pandas in a future version. Use pandas.Index with the appropriate dtype instead.
+#   elif isinstance(data.columns, (pd.Int64Index, pd.RangeIndex)):
+# MAE: 17.29509196256234
+# MSE: 619.6248593054104
+# RMSE: 24.892265049717963
+# R2: -0.044914665012219857
+# TEMPO TESTE: 0.020457983016967773 s
