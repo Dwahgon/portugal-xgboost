@@ -575,7 +575,7 @@ dteste = xgboost.DMatrix(X_teste, y_teste)
 num_boost_round = int(sys.argv[1])
 taxa_de_aprendizado = float(sys.argv[2])
 profundidado_maxima = int(sys.argv[3])
-numero_arvores = int(sys.argv[4])
+# numero_arvores = int(sys.argv[4])
 
 params = {
     "objective": "reg:squarederror",
