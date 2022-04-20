@@ -1,18 +1,22 @@
-from statistics import mean
+# from statistics import mean
+print("Importando")
+
+
 import sys
 import time 
-import os
-import datetime
-import IPython
+# import os
+# import datetime
+# import IPython
 import xgboost
-import IPython.display
+xgboost.set_config(verbosity=0)
+# import IPython.display
 import matplotlib as mpl
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import tensorflow as tf
-from pandas import read_csv
+# import seaborn as sns
+# import tensorflow as tf
+# from pandas import read_csv
 
 # biblioteca para o mapeamento de atributos categóricos
 from sklearn.preprocessing import LabelEncoder
@@ -20,6 +24,7 @@ from sklearn.preprocessing import LabelEncoder
 mpl.rcParams['figure.figsize'] = (8, 6)
 mpl.rcParams['axes.grid'] = False
 
+print("Lendo dataset")
 
 '''Read dataset'''
 df_full = pd.read_csv('dados_UDESC.csv')
@@ -166,15 +171,15 @@ data=X_all.drop('barra_fluxo',axis=1)
 column_indices = {name: i for i, name in enumerate(X_all.columns)}
 
 n = len(X_all)
-X_train = data[0:int(n*0.8)]
-#val_df = X_all[int(n*0.7):int(n*0.9)]
-X_test = data[int(n*0.8):]
+# X_train = data[0:int(n*0.8)]
+# #val_df = X_all[int(n*0.7):int(n*0.9)]
+# X_test = data[int(n*0.8):]
 
-y_train = label[0:int(n*0.8)]
-#val_df = X_all[int(n*0.7):int(n*0.9)]
-y_test = label[int(n*0.8):]
+# y_train = label[0:int(n*0.8)]
+# #val_df = X_all[int(n*0.7):int(n*0.9)]
+# y_test = label[int(n*0.8):]
 
-num_features = X_all.shape[1]
+# num_features = X_all.shape[1]
 
 # Clear any logs from previous runs
 #!rm -rf ./logs/
@@ -221,283 +226,283 @@ test_df = X_all[int(n*0.9):]
 
 num_features = X_all.shape[1]
 
-class WindowGenerator():
-  def __init__(self, input_width, label_width, shift,
-               train_df=train_df, val_df=val_df, test_df=test_df,
-               label_columns=None):
-    # Store the raw data.
-    self.train_df = train_df
-    self.val_df = val_df
-    self.test_df = test_df
+# class WindowGenerator():
+#   def __init__(self, input_width, label_width, shift,
+#                train_df=train_df, val_df=val_df, test_df=test_df,
+#                label_columns=None):
+#     # Store the raw data.
+#     self.train_df = train_df
+#     self.val_df = val_df
+#     self.test_df = test_df
 
-    # Work out the label column indices.
-    self.label_columns = label_columns
-    if label_columns is not None:
-      self.label_columns_indices = {name: i for i, name in
-                                    enumerate(label_columns)}
-    self.column_indices = {name: i for i, name in
-                           enumerate(train_df.columns)}
+#     # Work out the label column indices.
+#     self.label_columns = label_columns
+#     if label_columns is not None:
+#       self.label_columns_indices = {name: i for i, name in
+#                                     enumerate(label_columns)}
+#     self.column_indices = {name: i for i, name in
+#                            enumerate(train_df.columns)}
 
-    # Work out the window parameters.
-    self.input_width = input_width
-    self.label_width = label_width
-    self.shift = shift
+#     # Work out the window parameters.
+#     self.input_width = input_width
+#     self.label_width = label_width
+#     self.shift = shift
 
-    self.total_window_size = input_width + shift
+#     self.total_window_size = input_width + shift
 
-    self.input_slice = slice(0, input_width)
-    self.input_indices = np.arange(self.total_window_size)[self.input_slice]
+#     self.input_slice = slice(0, input_width)
+#     self.input_indices = np.arange(self.total_window_size)[self.input_slice]
 
-    self.label_start = self.total_window_size - self.label_width
-    self.labels_slice = slice(self.label_start, None)
-    self.label_indices = np.arange(self.total_window_size)[self.labels_slice]
+#     self.label_start = self.total_window_size - self.label_width
+#     self.labels_slice = slice(self.label_start, None)
+#     self.label_indices = np.arange(self.total_window_size)[self.labels_slice]
 
-  def __repr__(self):
-    return '\n'.join([
-        f'Total window size: {self.total_window_size}',
-        f'Input indices: {self.input_indices}',
-        f'Label indices: {self.label_indices}',
-        f'Label column name(s): {self.label_columns}'])
-
-
-w1 = WindowGenerator(input_width=24, label_width=1, shift=24,
-                     label_columns=['barra_fluxo'])
-
-w2 = WindowGenerator(input_width=6, label_width=1, shift=1,
-                     label_columns=['barra_fluxo'])
-
-def split_window(self, features):
-  inputs = features[:, self.input_slice, :]
-  labels = features[:, self.labels_slice, :]
-  if self.label_columns is not None:
-    labels = tf.stack(
-        [labels[:, :, self.column_indices[name]] for name in self.label_columns],
-        axis=-1)
-
-  # Slicing doesn't preserve static shape information, so set the shapes
-  # manually. This way the `tf.data.Datasets` are easier to inspect.
-  inputs.set_shape([None, self.input_width, None])
-  labels.set_shape([None, self.label_width, None])
-
-  return inputs, labels
-
-WindowGenerator.split_window = split_window
-
-# Stack three slices, the length of the total window.
-example_window = tf.stack([np.array(train_df[:w2.total_window_size]),
-                           np.array(train_df[100:100+w2.total_window_size]),
-                           np.array(train_df[200:200+w2.total_window_size])])
-
-example_inputs, example_labels = w2.split_window(example_window)
-
-w2.example = example_inputs, example_labels
-
-def plot(self, model=None, plot_col='barra_fluxo', max_subplots=5):
-  inputs, labels = self.example
-  plt.figure(figsize=(12, 8))
-  plot_col_index = self.column_indices[plot_col]
-  max_n = min(max_subplots, len(inputs))
-  for n in range(max_n):
-    plt.subplot(max_n, 1, n+1)
-    plt.ylabel(f'{plot_col} ')
-    plt.plot(self.input_indices, inputs[n, :, plot_col_index],
-             label='Inputs', marker='.', zorder=-10)
-
-    if self.label_columns:
-      label_col_index = self.label_columns_indices.get(plot_col, None)
-    else:
-      label_col_index = plot_col_index
-
-    if label_col_index is None:
-      continue
-
-    plt.scatter(self.label_indices, labels[n, :, label_col_index],
-                edgecolors='k', label='Labels', c='#2ca02c', s=64)
-    if model is not None:
-      predictions = model(inputs)
-      plt.scatter(self.label_indices, predictions[n, :, label_col_index],
-                  marker='X', edgecolors='k', label='Predictions',
-                  c='#ff7f0e', s=64)
-
-    if n == 0:
-      plt.legend()
-
-  plt.xlabel('Time [10 min]')
-
-WindowGenerator.plot = plot
-
-def make_dataset(self, data):
-  data = np.array(data, dtype=np.float32)
-  ds = tf.keras.preprocessing.timeseries_dataset_from_array(
-      data=data,
-      targets=None,
-      sequence_length=self.total_window_size,
-      sequence_stride=1,
-      shuffle=True,
-      batch_size=32,)
-
-  ds = ds.map(self.split_window)
-
-  return ds
-
-WindowGenerator.make_dataset = make_dataset
+#   def __repr__(self):
+#     return '\n'.join([
+#         f'Total window size: {self.total_window_size}',
+#         f'Input indices: {self.input_indices}',
+#         f'Label indices: {self.label_indices}',
+#         f'Label column name(s): {self.label_columns}'])
 
 
-@property
-def train(self):
-  return self.make_dataset(self.train_df)
+# w1 = WindowGenerator(input_width=24, label_width=1, shift=24,
+#                      label_columns=['barra_fluxo'])
 
-@property
-def val(self):
-  return self.make_dataset(self.val_df)
+# w2 = WindowGenerator(input_width=6, label_width=1, shift=1,
+#                      label_columns=['barra_fluxo'])
 
-@property
-def test(self):
-  return self.make_dataset(self.test_df)
+# def split_window(self, features):
+#   inputs = features[:, self.input_slice, :]
+#   labels = features[:, self.labels_slice, :]
+#   if self.label_columns is not None:
+#     labels = tf.stack(
+#         [labels[:, :, self.column_indices[name]] for name in self.label_columns],
+#         axis=-1)
 
-@property
-def example(self):
-  """Get and cache an example batch of `inputs, labels` for plotting."""
-  result = getattr(self, '_example', None)
-  if result is None:
-    # No example batch was found, so get one from the `.train` dataset
-    result = next(iter(self.train))
-    # And cache it for next time
-    self._example = result
-  return result
+#   # Slicing doesn't preserve static shape information, so set the shapes
+#   # manually. This way the `tf.data.Datasets` are easier to inspect.
+#   inputs.set_shape([None, self.input_width, None])
+#   labels.set_shape([None, self.label_width, None])
 
-WindowGenerator.train = train
-WindowGenerator.val = val
-WindowGenerator.test = test
-WindowGenerator.example = example
+#   return inputs, labels
 
-single_step_window = WindowGenerator(
-    input_width=1, label_width=1, shift=1,
-    label_columns=['barra_fluxo'])
+# WindowGenerator.split_window = split_window
 
-class Baseline(tf.keras.Model):
-  def __init__(self, label_index=None):
-    super().__init__()
-    self.label_index = label_index
+# # Stack three slices, the length of the total window.
+# example_window = tf.stack([np.array(train_df[:w2.total_window_size]),
+#                            np.array(train_df[100:100+w2.total_window_size]),
+#                            np.array(train_df[200:200+w2.total_window_size])])
 
-  def call(self, inputs):
-    if self.label_index is None:
-      return inputs
-    result = inputs[:, :, self.label_index]
-    return result[:, :, tf.newaxis]
+# example_inputs, example_labels = w2.split_window(example_window)
 
-baseline = Baseline(label_index=column_indices['barra_fluxo'])
+# w2.example = example_inputs, example_labels
 
-baseline.compile(loss=tf.losses.MeanSquaredError(),
-                 metrics=[tf.metrics.MeanAbsoluteError()])
+# def plot(self, model=None, plot_col='barra_fluxo', max_subplots=5):
+#   inputs, labels = self.example
+#   plt.figure(figsize=(12, 8))
+#   plot_col_index = self.column_indices[plot_col]
+#   max_n = min(max_subplots, len(inputs))
+#   for n in range(max_n):
+#     plt.subplot(max_n, 1, n+1)
+#     plt.ylabel(f'{plot_col} ')
+#     plt.plot(self.input_indices, inputs[n, :, plot_col_index],
+#              label='Inputs', marker='.', zorder=-10)
 
-val_performance = {}
-performance = {}
-val_performance['Baseline'] = baseline.evaluate(single_step_window.val)
-performance['Baseline'] = baseline.evaluate(single_step_window.test, verbose=0)
+#     if self.label_columns:
+#       label_col_index = self.label_columns_indices.get(plot_col, None)
+#     else:
+#       label_col_index = plot_col_index
 
-wide_window = WindowGenerator(
-    input_width=12, label_width=12, shift=1,
-    label_columns=['barra_fluxo'])
+#     if label_col_index is None:
+#       continue
+
+#     plt.scatter(self.label_indices, labels[n, :, label_col_index],
+#                 edgecolors='k', label='Labels', c='#2ca02c', s=64)
+#     if model is not None:
+#       predictions = model(inputs)
+#       plt.scatter(self.label_indices, predictions[n, :, label_col_index],
+#                   marker='X', edgecolors='k', label='Predictions',
+#                   c='#ff7f0e', s=64)
+
+#     if n == 0:
+#       plt.legend()
+
+#   plt.xlabel('Time [10 min]')
+
+# WindowGenerator.plot = plot
+
+# def make_dataset(self, data):
+#   data = np.array(data, dtype=np.float32)
+#   ds = tf.keras.preprocessing.timeseries_dataset_from_array(
+#       data=data,
+#       targets=None,
+#       sequence_length=self.total_window_size,
+#       sequence_stride=1,
+#       shuffle=True,
+#       batch_size=32,)
+
+#   ds = ds.map(self.split_window)
+
+#   return ds
+
+# WindowGenerator.make_dataset = make_dataset
 
 
-wide_window = WindowGenerator(
-    input_width=3, label_width=3, shift=1,
-    label_columns=['barra_fluxo'])
+# @property
+# def train(self):
+#   return self.make_dataset(self.train_df)
+
+# @property
+# def val(self):
+#   return self.make_dataset(self.val_df)
+
+# @property
+# def test(self):
+#   return self.make_dataset(self.test_df)
+
+# @property
+# def example(self):
+#   """Get and cache an example batch of `inputs, labels` for plotting."""
+#   result = getattr(self, '_example', None)
+#   if result is None:
+#     # No example batch was found, so get one from the `.train` dataset
+#     result = next(iter(self.train))
+#     # And cache it for next time
+#     self._example = result
+#   return result
+
+# WindowGenerator.train = train
+# WindowGenerator.val = val
+# WindowGenerator.test = test
+# WindowGenerator.example = example
+
+# single_step_window = WindowGenerator(
+#     input_width=1, label_width=1, shift=1,
+#     label_columns=['barra_fluxo'])
+
+# class Baseline(tf.keras.Model):
+#   def __init__(self, label_index=None):
+#     super().__init__()
+#     self.label_index = label_index
+
+#   def call(self, inputs):
+#     if self.label_index is None:
+#       return inputs
+#     result = inputs[:, :, self.label_index]
+#     return result[:, :, tf.newaxis]
+
+# baseline = Baseline(label_index=column_indices['barra_fluxo'])
+
+# baseline.compile(loss=tf.losses.MeanSquaredError(),
+#                  metrics=[tf.metrics.MeanAbsoluteError()])
+
+# val_performance = {}
+# performance = {}
+# val_performance['Baseline'] = baseline.evaluate(single_step_window.val)
+# performance['Baseline'] = baseline.evaluate(single_step_window.test, verbose=0)
+
+# wide_window = WindowGenerator(
+#     input_width=12, label_width=12, shift=1,
+#     label_columns=['barra_fluxo'])
+
+
+# wide_window = WindowGenerator(
+#     input_width=3, label_width=3, shift=1,
+#     label_columns=['barra_fluxo'])
 
 
 
-MAX_EPOCHS = 150
+# MAX_EPOCHS = 150
 
-def compile_and_fit(model: xgboost.XGBRegressor, window, modelo, patience=3):
-  early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss',
-                                                    patience=patience,
-                                                    mode='min')
+# def compile_and_fit(model: xgboost.XGBRegressor, window, modelo, patience=3):
+#   early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss',
+#                                                     patience=patience,
+#                                                     mode='min')
 
-  # model.compile(loss=tf.losses.MeanAbsoluteError(),
-  #               optimizer=tf.optimizers.RMSprop(),
-  #               metrics=[tf.metrics.MeanAbsoluteError()])
+#   # model.compile(loss=tf.losses.MeanAbsoluteError(),
+#   #               optimizer=tf.optimizers.RMSprop(),
+#   #               metrics=[tf.metrics.MeanAbsoluteError()])
   
-  log_dir = "./logs/Logs_TensorBoard_Wit/Neural_jan_2022/" +  modelo +  '_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+#   log_dir = "./logs/Logs_TensorBoard_Wit/Neural_jan_2022/" +  modelo +  '_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
   
-  history = model.fit(*window.train,
-                      callbacks=[early_stopping,tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)])
-  return history
+#   history = model.fit(*window.train,
+#                       callbacks=[early_stopping,tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)])
+#   return history
 
 
 
-CONV_WIDTH = 3
-conv_window = WindowGenerator(
-    input_width=CONV_WIDTH,
-    label_width=1,
-    shift=1,
-    label_columns=['barra_fluxo'])
+# CONV_WIDTH = 3
+# conv_window = WindowGenerator(
+#     input_width=CONV_WIDTH,
+#     label_width=1,
+#     shift=1,
+#     label_columns=['barra_fluxo'])
 
 
 
-LABEL_WIDTH = 12
-INPUT_WIDTH = LABEL_WIDTH + (CONV_WIDTH - 1)
-wide_conv_window = WindowGenerator(
-    input_width=INPUT_WIDTH,
-    label_width=LABEL_WIDTH,
-    shift=1,
-    label_columns=['barra_fluxo'])
+# LABEL_WIDTH = 12
+# INPUT_WIDTH = LABEL_WIDTH + (CONV_WIDTH - 1)
+# wide_conv_window = WindowGenerator(
+#     input_width=INPUT_WIDTH,
+#     label_width=LABEL_WIDTH,
+#     shift=1,
+#     label_columns=['barra_fluxo'])
 
 
-'''
-AQUI
-'''
-OUT_STEPS = 12
-multi_window = WindowGenerator(input_width=12,
-                               label_width=OUT_STEPS,
-                               shift=OUT_STEPS)
+# '''
+# AQUI
+# '''
+# OUT_STEPS = 12
+# multi_window = WindowGenerator(input_width=12,
+#                                label_width=OUT_STEPS,
+#                                shift=OUT_STEPS)
 
-multi_window.plot()
+# multi_window.plot()
 
 
-class MultiStepLastBaseline(tf.keras.Model):
-  def call(self, inputs):
-    return tf.tile(inputs[:, -1:, :], [1, OUT_STEPS, 1])
+# class MultiStepLastBaseline(tf.keras.Model):
+#   def call(self, inputs):
+#     return tf.tile(inputs[:, -1:, :], [1, OUT_STEPS, 1])
 
-last_baseline = MultiStepLastBaseline()
-last_baseline.compile(loss=tf.losses.MeanSquaredError(),
-                      metrics=[tf.metrics.MeanAbsoluteError()])
+# last_baseline = MultiStepLastBaseline()
+# last_baseline.compile(loss=tf.losses.MeanSquaredError(),
+#                       metrics=[tf.metrics.MeanAbsoluteError()])
 
-multi_val_performance = {}
-multi_performance = {}
+# multi_val_performance = {}
+# multi_performance = {}
 
-multi_val_performance['Last'] = last_baseline.evaluate(multi_window.val)
-multi_performance['Last'] = last_baseline.evaluate(multi_window.test, verbose=0)
+# multi_val_performance['Last'] = last_baseline.evaluate(multi_window.val)
+# multi_performance['Last'] = last_baseline.evaluate(multi_window.test, verbose=0)
 
-class RepeatBaseline(tf.keras.Model):
-  def call(self, inputs):
-    return inputs
+# class RepeatBaseline(tf.keras.Model):
+#   def call(self, inputs):
+#     return inputs
 
-repeat_baseline = RepeatBaseline()
-repeat_baseline.compile(loss=tf.losses.MeanSquaredError(),
-                        metrics=[tf.metrics.MeanAbsoluteError()])
+# repeat_baseline = RepeatBaseline()
+# repeat_baseline.compile(loss=tf.losses.MeanSquaredError(),
+#                         metrics=[tf.metrics.MeanAbsoluteError()])
 
-multi_val_performance['Repeat'] = repeat_baseline.evaluate(multi_window.val)
-multi_performance['Repeat'] = repeat_baseline.evaluate(multi_window.test, verbose=0)
+# multi_val_performance['Repeat'] = repeat_baseline.evaluate(multi_window.val)
+# multi_performance['Repeat'] = repeat_baseline.evaluate(multi_window.test, verbose=0)
 
 
 
 ####################################################
-import csv 
+# import csv 
 
-combs = []
+# combs = []
 
-for i in range(1,7):
-    combs.append( (i,i) )
+# for i in range(1,7):
+#     combs.append( (i,i) )
 
-for i in range(1,7):
-    if i != 1:
-        combs.append( (i,1) )
+# for i in range(1,7):
+#     if i != 1:
+#         combs.append( (i,1) )
 
-with open('resultados_barra_CNN_novo.csv', mode='a') as res:
-    res.truncate(0)
-    writer = csv.writer(res, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    writer.writerow( ['input','output', 'mae1','mae2','mae3','time1','time2','time3'] )
+# with open('resultados_barra_CNN_novo.csv', mode='a') as res:
+#     res.truncate(0)
+#     writer = csv.writer(res, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+#     writer.writerow( ['input','output', 'mae1','mae2','mae3','time1','time2','time3'] )
 
 # for size in combs:
 #     OUT_STEPS = size[1]
@@ -562,26 +567,37 @@ X_train = data[0:int(n*0.7)]
 y_train = label[0:int(n*0.7)]
 X_val = data[int(n*0.7):int(n*0.9)]
 y_val = label[int(n*0.7):int(n*0.9)]
+dval = xgboost.DMatrix(X_val, label=y_val)
 X_teste = data[int(n*0.9):]
 y_teste = label[int(n*0.9):]
+dteste = xgboost.DMatrix(X_teste, y_teste)
 
-parametros = {
-  "eta": float(sys.argv[1]),
-  "max_depth": int(sys.argv[2]),
+num_boost_round = int(sys.argv[1])
+taxa_de_aprendizado = float(sys.argv[2])
+profundidado_maxima = int(sys.argv[3])
+numero_arvores = int(sys.argv[4])
+
+params = {
+    "objective": "reg:squarederror",
+    "eta": taxa_de_aprendizado,
+    "eval_metric": "mae",
+    "max_depth": profundidado_maxima,
+    "n_estimators": numero_arvores
 }
 print("="*100)
-print(str(parametros))
+print(str(params))
 
 STEP_SIZE = 6
 i_train = 0
-classificador = xgboost.XGBRegressor()
+classificador = None
 tempo_inicio = time.time()
 while i_train < X_train.shape[0]:
   print(f"{i_train}/{X_train.shape[0]}", end="\r")
   ultimo_indice = i_train + STEP_SIZE
   if ultimo_indice >= X_train.shape[0]:
     ultimo_indice = X_train.shape[0] - 1
-  classificador.fit(X_train[i_train:ultimo_indice], y_train[i_train:ultimo_indice], xgb_model=classificador.booster)
+  dtrain = xgboost.DMatrix(X_train[i_train:ultimo_indice], label=y_train[i_train:ultimo_indice])
+  classificador = xgboost.train(params,dtrain=dtrain, num_boost_round=num_boost_round, xgb_model=classificador)
   i_train = ultimo_indice + 1
 tempo_execucao = time.time() - tempo_inicio
 
@@ -589,7 +605,8 @@ print(f"TEMPO TREINAMENTO: {tempo_execucao} s")
 
 def resultados(modelo, conjunto_X, conjunto_y):
   tempo_inicio = time.time()
-  y_pred = modelo.predict(conjunto_X)
+  dconjuntox = xgboost.DMatrix(conjunto_X)
+  y_pred = modelo.predict(dconjuntox)
   mae = mean_absolute_error(conjunto_y, y_pred) # 11.935
   mse = mean_squared_error(conjunto_y, y_pred)  # 337.377
   rmse = np.sqrt(mse)                       # 18.367
@@ -606,6 +623,19 @@ print("Validação")
 resultados(classificador, X_val, y_val)
 print("Teste")
 resultados(classificador, X_teste, y_teste)
+
+print ("Teste normal")
+dtrain = xgboost.DMatrix(X_train, label=y_train)
+tempo_inicio = time.time()
+classificador = xgboost.train(params,dtrain=dtrain, num_boost_round=num_boost_round, xgb_model=classificador)
+tempo_execucao = time.time() - tempo_inicio
+
+print(f"TEMPO TREINAMENTO: {tempo_execucao} s")
+print("Validação")
+resultados(classificador, X_val, y_val)
+print("Teste")
+resultados(classificador, X_teste, y_teste)
+
 
 # eta .1
 # max_depth 5
