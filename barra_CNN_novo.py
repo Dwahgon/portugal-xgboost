@@ -582,7 +582,7 @@ params = {
     "eta": taxa_de_aprendizado,
     "eval_metric": "mae",
     "max_depth": profundidado_maxima,
-    "n_estimators": numero_arvores
+    # "n_estimators": numero_arvores
 }
 print("="*100)
 print(str(params))

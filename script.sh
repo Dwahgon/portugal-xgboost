@@ -9,10 +9,10 @@ do
     do
         for max_depth in ${MAX_DEPTH[@]}
         do
-            for n_estimators in ${N_ESTIMATORS[@]}
-            do
-                python3 barra_CNN_novo.py $boost_round $eta $max_depth $n_estimators
-            done
+            # for n_estimators in ${N_ESTIMATORS[@]}
+            # do
+            python3 barra_CNN_novo.py $boost_round $eta $max_depth $n_estimators
+            # done
         done
     done
 done
