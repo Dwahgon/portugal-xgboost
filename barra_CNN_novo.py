@@ -1,19 +1,35 @@
-# from statistics import mean
+# Comando
+# python3 barra_CNN_novo.py num_boost_round taxa_de_aprendizado profundidado_maxima
+# Exemplo
+# python3 barra_CNN_novo.py 5 0.1 10
+
 print("Importando")
 
 
-import sys
-import time 
-# import os
-# import datetime
-# import IPython
+import time
 import xgboost
+import argumentos
+import salvar_resultados
+import json
+
 xgboost.set_config(verbosity=0)
-# import IPython.display
 import matplotlib as mpl
-# import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from sklearn.metrics import (
+    r2_score,
+    mean_squared_error,
+    mean_absolute_error,
+    mean_squared_log_error,
+)
+
+# from math import sqrt
+# from statistics import mean
+# import datetime
+# import os
+# import IPython
+# import IPython.display
+# import matplotlib.pyplot as plt
 # import seaborn as sns
 # import tensorflow as tf
 # from pandas import read_csv
@@ -21,115 +37,159 @@ import pandas as pd
 # biblioteca para o mapeamento de atributos categóricos
 from sklearn.preprocessing import LabelEncoder
 
-mpl.rcParams['figure.figsize'] = (8, 6)
-mpl.rcParams['axes.grid'] = False
+mpl.rcParams["figure.figsize"] = (8, 6)
+mpl.rcParams["axes.grid"] = False
 
 print("Lendo dataset")
 
-'''Read dataset'''
-df_full = pd.read_csv('dados_UDESC.csv')
+"""Read dataset"""
+df_full = pd.read_csv("dados_UDESC.csv")
 
-#df_teste = df_full.groupby(['ano', 'mes','dia','hora'])[['barra_fluxo']].count()
-df_dia = df_full.groupby(['ano', 'mes','dia'])[['barra_fluxo']].count()
+# df_teste = df_full.groupby(['ano', 'mes','dia','hora'])[['barra_fluxo']].count()
+df_dia = df_full.groupby(["ano", "mes", "dia"])[[argumentos.label]].count()
 
 # transformar o resultado do groupby em dataframe.
 df_fim_dia = df_dia.reset_index(level=df_dia.index.names)
 
 # alteração de nomes de colunas
-df_fim_dia.rename(columns={'barra_fluxo': 'qtde_medidas'}, inplace=True)
+df_fim_dia.rename(columns={argumentos.label: "qtde_medidas"}, inplace=True)
 
-#df_teste = df_full.groupby(['ano', 'mes','dia','hora'])[['barra_fluxo']].count()
-df_mes = df_full.groupby(['ano', 'mes'])[['barra_fluxo']].count()
+# df_teste = df_full.groupby(['ano', 'mes','dia','hora'])[['barra_fluxo']].count()
+df_mes = df_full.groupby(["ano", "mes"])[[argumentos.label]].count()
 
 # transformar o resultado do groupby em dataframe.
 df_fim_mes = df_mes.reset_index(level=df_mes.index.names)
 
 # alteração de nomes de colunas
-df_fim_mes.rename(columns={'barra_fluxo': 'qtde_medidas'}, inplace=True)
+df_fim_mes.rename(columns={argumentos.label: "qtde_medidas"}, inplace=True)
 
 ## Dados setembro 2021 completo e com as duas estacoes (aveiro e dunas)
 # colocar em variavel "numerica" somente as colunas numericas
 # incluindo as medicoes de velocidade para cada radar
-X_numerical = df_full[['med_temp', 'max_temp','min_temp','med_vento', 'max_vento','med_vento_av','max_vento_av', 'med_prec','med_rg', 
-                       'med_prec_av','med_rg_av','med_temp_av','max_temp_av','min_temp_av','ria_med_vel_1','ria_med_vel_0',
-                       'poste_med_vel_1','poste_med_vel_0','ponte_med_vel_1','ponte_med_vel_0','ria_max_vel_1','ria_max_vel_0',
-                       'poste_max_vel_1','poste_max_vel_0','ponte_max_vel_1','ponte_max_vel_0','ria_min_vel_1','ria_min_vel_0',
-                       'poste_min_vel_1','poste_min_vel_0','ponte_min_vel_1','ponte_min_vel_0']]
+X_numerical = df_full[
+    [
+        "med_temp",
+        "max_temp",
+        "min_temp",
+        "med_vento",
+        "max_vento",
+        "med_vento_av",
+        "max_vento_av",
+        "med_prec",
+        "med_rg",
+        "med_prec_av",
+        "med_rg_av",
+        "med_temp_av",
+        "max_temp_av",
+        "min_temp_av",
+        "ria_med_vel_1",
+        "ria_med_vel_0",
+        "poste_med_vel_1",
+        "poste_med_vel_0",
+        "ponte_med_vel_1",
+        "ponte_med_vel_0",
+        "ria_max_vel_1",
+        "ria_max_vel_0",
+        "poste_max_vel_1",
+        "poste_max_vel_0",
+        "ponte_max_vel_1",
+        "ponte_max_vel_0",
+        "ria_min_vel_1",
+        "ria_min_vel_0",
+        "poste_min_vel_1",
+        "poste_min_vel_0",
+        "ponte_min_vel_1",
+        "ponte_min_vel_0",
+    ]
+]
 
-# excluindo colunas 
+# excluindo colunas
 
 X_numerical = X_numerical.reset_index()
 
-X_numerical = X_numerical.drop(columns=['index'])
+X_numerical = X_numerical.drop(columns=["index"])
 
 
- # com o objetivo de facilitar a utilização de redes neurais, os atributos de velocidade relacionadas com os radares (aproximação e distanciamento) que não possuem valor (NaN) foram preenchidos com valor "0".
- 
- 
-X_numerical['ria_med_vel_1'] = X_numerical['ria_med_vel_1'].fillna(0)
-X_numerical['ria_med_vel_0'] = X_numerical['ria_med_vel_0'].fillna(0)
-X_numerical['poste_med_vel_1'] = X_numerical['poste_med_vel_1'].fillna(0)
-X_numerical['poste_med_vel_0'] = X_numerical['poste_med_vel_0'].fillna(0)
-X_numerical['ponte_med_vel_1'] = X_numerical['ponte_med_vel_1'].fillna(0)
-X_numerical['ponte_med_vel_0'] = X_numerical['ponte_med_vel_0'].fillna(0)
-X_numerical['ria_max_vel_1'] = X_numerical['ria_max_vel_1'].fillna(0)
-X_numerical['ria_max_vel_0'] = X_numerical['ria_max_vel_0'].fillna(0)
-X_numerical['poste_max_vel_1'] = X_numerical['poste_max_vel_1'].fillna(0)
-X_numerical['poste_max_vel_0'] = X_numerical['poste_max_vel_0'].fillna(0)
+# com o objetivo de facilitar a utilização de redes neurais, os atributos de velocidade relacionadas com os radares (aproximação e distanciamento) que não possuem valor (NaN) foram preenchidos com valor "0".
 
-X_numerical['ponte_max_vel_1'] = X_numerical['ponte_max_vel_1'].fillna(0)
-X_numerical['ponte_max_vel_0'] = X_numerical['ponte_max_vel_0'].fillna(0)
-X_numerical['ria_min_vel_1'] = X_numerical['ria_min_vel_1'].fillna(0)
-X_numerical['ria_min_vel_0'] = X_numerical['ria_min_vel_0'].fillna(0)
-X_numerical['poste_min_vel_1'] = X_numerical['poste_min_vel_1'].fillna(0)
-X_numerical['poste_min_vel_0'] = X_numerical['poste_min_vel_0'].fillna(0)
-X_numerical['ponte_min_vel_1'] = X_numerical['ponte_min_vel_1'].fillna(0)
-X_numerical['ponte_min_vel_0'] = X_numerical['ponte_min_vel_0'].fillna(0)
+
+X_numerical["ria_med_vel_1"] = X_numerical["ria_med_vel_1"].fillna(0)
+X_numerical["ria_med_vel_0"] = X_numerical["ria_med_vel_0"].fillna(0)
+X_numerical["poste_med_vel_1"] = X_numerical["poste_med_vel_1"].fillna(0)
+X_numerical["poste_med_vel_0"] = X_numerical["poste_med_vel_0"].fillna(0)
+X_numerical["ponte_med_vel_1"] = X_numerical["ponte_med_vel_1"].fillna(0)
+X_numerical["ponte_med_vel_0"] = X_numerical["ponte_med_vel_0"].fillna(0)
+X_numerical["ria_max_vel_1"] = X_numerical["ria_max_vel_1"].fillna(0)
+X_numerical["ria_max_vel_0"] = X_numerical["ria_max_vel_0"].fillna(0)
+X_numerical["poste_max_vel_1"] = X_numerical["poste_max_vel_1"].fillna(0)
+X_numerical["poste_max_vel_0"] = X_numerical["poste_max_vel_0"].fillna(0)
+
+X_numerical["ponte_max_vel_1"] = X_numerical["ponte_max_vel_1"].fillna(0)
+X_numerical["ponte_max_vel_0"] = X_numerical["ponte_max_vel_0"].fillna(0)
+X_numerical["ria_min_vel_1"] = X_numerical["ria_min_vel_1"].fillna(0)
+X_numerical["ria_min_vel_0"] = X_numerical["ria_min_vel_0"].fillna(0)
+X_numerical["poste_min_vel_1"] = X_numerical["poste_min_vel_1"].fillna(0)
+X_numerical["poste_min_vel_0"] = X_numerical["poste_min_vel_0"].fillna(0)
+X_numerical["ponte_min_vel_1"] = X_numerical["ponte_min_vel_1"].fillna(0)
+X_numerical["ponte_min_vel_0"] = X_numerical["ponte_min_vel_0"].fillna(0)
 
 
 # cria variavel para receber os atributos categoricos
 # com minuto_meteo
 
-X_cat = df_full[['ano','wd','mes','dia','hora','minuto_meteo','rumo_vento_med_corr','rumo_vento_max_corr', 'rumo_vento_med_av_corr', 'rumo_vento_max_av_corr']]
+X_cat = df_full[
+    [
+        "ano",
+        "wd",
+        "mes",
+        "dia",
+        "hora",
+        "minuto_meteo",
+        "rumo_vento_med_corr",
+        "rumo_vento_max_corr",
+        "rumo_vento_med_av_corr",
+        "rumo_vento_max_av_corr",
+    ]
+]
 
 
 # A variável X_fluxo receberá os valores de fluxo a serem utilizados tanto para treinamento quanto para teste do modelo.
 # o DF já possui valores de fluxo calculados para as duas regiões e para os instantes de tempo t0 até t10.
 
-X_fluxo = df_full[['barra_fluxo']] # aqui significa o fluxo na barra no instante t0
-#X_fluxo = df_full[['barra_fluxo_t1']] # aqui significa o fluxo na barra no instante t1
-#X_fluxo = df_full[['costa_fluxo_t10']]
-#X_fluxo = df_full[['barra_fluxo_t10']]
-#X_fluxo = df_full[['costa_fluxo']]
+X_fluxo = df_full[[argumentos.label]]  # aqui significa o fluxo na barra no instante t0
+# X_fluxo = df_full[['barra_fluxo_t1']] # aqui significa o fluxo na barra no instante t1
+# X_fluxo = df_full[['costa_fluxo_t10']]
+# X_fluxo = df_full[['barra_fluxo_t10']]
+# X_fluxo = df_full[['costa_fluxo']]
 
 # Aqui sem a normalização
-X_all = pd.concat([X_cat, X_numerical, X_fluxo], axis = 1)
+X_all = pd.concat([X_cat, X_numerical, X_fluxo], axis=1)
 
 
 class MultiColumnLabelEncoder:
-    def __init__(self,columns = None):
-        self.columns = columns # array of column names to encode
+    def __init__(self, columns=None):
+        self.columns = columns  # array of column names to encode
 
-    def fit(self,X,y=None):
-        return self # not relevant here
+    def fit(self, X, y=None):
+        return self  # not relevant here
 
-    def transform(self,X):
-        '''
+    def transform(self, X):
+        """
         Transforms columns of X specified in self.columns using
         LabelEncoder(). If no columns specified, transforms all
         columns in X.
-        '''
+        """
         output = X.copy()
         if self.columns is not None:
             for col in self.columns:
                 output[col] = LabelEncoder().fit_transform(output[col])
         else:
-            for colname,col in output.iteritems():
+            for colname, col in output.iteritems():
                 output[colname] = LabelEncoder().fit_transform(col)
         return output
 
-    def fit_transform(self,X,y=None):
-        return self.fit(X,y).transform(X)
+    def fit_transform(self, X, y=None):
+        return self.fit(X, y).transform(X)
 
 
 # função para utilizar na avaliação do melhor modelo de rede neural
@@ -139,36 +199,38 @@ def adjust_prediction(z):
 
 
 # aplicação do Encoder nos atributos de rumo do vento
-#rumo_vento_med_corr	rumo_vento_max_corr	rumo_vento_med_av_corr	rumo_vento_max_av_corr
+# rumo_vento_med_corr	rumo_vento_max_corr	rumo_vento_med_av_corr	rumo_vento_max_av_corr
 
-categorical=['rumo_vento_med_corr']
+categorical = ["rumo_vento_med_corr"]
 
-X_all=MultiColumnLabelEncoder(columns=categorical).fit_transform(X_all)
-#print(X_all.shape)
+X_all = MultiColumnLabelEncoder(columns=categorical).fit_transform(X_all)
+# print(X_all.shape)
 
-categorical=['rumo_vento_max_corr']
+categorical = ["rumo_vento_max_corr"]
 
-X_all=MultiColumnLabelEncoder(columns=categorical).fit_transform(X_all)
-#print(X_all.shape)
+X_all = MultiColumnLabelEncoder(columns=categorical).fit_transform(X_all)
+# print(X_all.shape)
 
-categorical=['rumo_vento_med_av_corr']
+categorical = ["rumo_vento_med_av_corr"]
 
-X_all=MultiColumnLabelEncoder(columns=categorical).fit_transform(X_all)
-#print(X_all.shape)
+X_all = MultiColumnLabelEncoder(columns=categorical).fit_transform(X_all)
+# print(X_all.shape)
 
-categorical=['rumo_vento_max_av_corr']
+categorical = ["rumo_vento_max_av_corr"]
 
-X_all=MultiColumnLabelEncoder(columns=categorical).fit_transform(X_all)
+X_all = MultiColumnLabelEncoder(columns=categorical).fit_transform(X_all)
 
 # FIM DA PREPARAÇÃO
 
-# DEFINIÇÃO DE HIPERPARAMETROS 
+# DEFINIÇÃO DE HIPERPARAMETROS
 
-#data=X_all.drop('barra_fluxo',axis=1)
-label=X_all[['barra_fluxo']]
-data=X_all.drop('barra_fluxo',axis=1)
+# data=X_all.drop('barra_fluxo',axis=1)
+for cat in X_cat:
+    X_all[cat].astype("category")
+label = X_all[[argumentos.label]]
+data = X_all.drop(argumentos.label, axis=1)
 
-column_indices = {name: i for i, name in enumerate(X_all.columns)}
+# column_indices = {name: i for i, name in enumerate(X_all.columns)}
 
 n = len(X_all)
 # X_train = data[0:int(n*0.8)]
@@ -185,46 +247,34 @@ n = len(X_all)
 #!rm -rf ./logs/
 
 
-
-
-
-
-
 # residuos modelo base
-
-
-
-from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error, mean_squared_log_error
-from math import sqrt
-
-
 
 
 # R2 apresenta o percentual de medidas que ele conseguiu acertar
 # R2 ajustado apresenta o percentual apos incluir alguns atributos que provavelmente não auxiliam no modelo
 
-#mae = mean_absolute_error(y_test, y_predict)
-#mse = mean_squared_error(y_test, y_predict)
-#msle = mean_squared_log_error(y_test, y_predict)
-#rmse = sqrt(mse)
-#r2 = r2_score(y_test, y_predict)
-#adj_r2 = 1 - (1 - r2) * (n - 1) / (n - k - 1)
+# mae = mean_absolute_error(y_test, y_predict)
+# mse = mean_squared_error(y_test, y_predict)
+# msle = mean_squared_log_error(y_test, y_predict)
+# rmse = sqrt(mse)
+# r2 = r2_score(y_test, y_predict)
+# adj_r2 = 1 - (1 - r2) * (n - 1) / (n - k - 1)
 
 # teste_tanh - t
-#print("MAE_Original: ", mae, "\nMSE: ", mse,  "\nRMSE: ", rmse, "\nR2: ", r2, "\nADJ R2: ", adj_r2, "\n")
+# print("MAE_Original: ", mae, "\nMSE: ", mse,  "\nRMSE: ", rmse, "\nR2: ", r2, "\nADJ R2: ", adj_r2, "\n")
 
-#print("MAE_Barra_Original: ", mae_barra_orig, "\nMSE_barra: ", mse_barra_orig,  "\nRMSE_barra: ", rmse_barra_orig, "\nR2_barra: ", r2_barra_orig, "\nADJ R2_barra: ", adj_r2_barra_orig, "\n")
+# print("MAE_Barra_Original: ", mae_barra_orig, "\nMSE_barra: ", mse_barra_orig,  "\nRMSE_barra: ", rmse_barra_orig, "\nR2_barra: ", r2_barra_orig, "\nADJ R2_barra: ", adj_r2_barra_orig, "\n")
 
-#print("MAE_Costa_Original: ", mae_costa_orig, "\nMSE_costa: ", mse_costa_orig,  "\nRMSE_costa: ", rmse_costa_orig, "\nR2_costa: ", r2_costa_orig, "\nADJ R2_costa: ", adj_r2_costa_orig, "\n")
+# print("MAE_Costa_Original: ", mae_costa_orig, "\nMSE_costa: ", mse_costa_orig,  "\nRMSE_costa: ", rmse_costa_orig, "\nR2_costa: ", r2_costa_orig, "\nADJ R2_costa: ", adj_r2_costa_orig, "\n")
 
-column_indices = {name: i for i, name in enumerate(X_all.columns)}
+# column_indices = {name: i for i, name in enumerate(X_all.columns)}
 
-n = len(X_all)
-train_df = X_all[0:int(n*0.7)]
-val_df = X_all[int(n*0.7):int(n*0.9)]
-test_df = X_all[int(n*0.9):]
+# n = len(X_all)
+# train_df = X_all[0:int(n*0.7)]
+# val_df = X_all[int(n*0.7):int(n*0.9)]
+# test_df = X_all[int(n*0.9):]
 
-num_features = X_all.shape[1]
+# num_features = X_all.shape[1]
 
 # class WindowGenerator():
 #   def __init__(self, input_width, label_width, shift,
@@ -411,7 +461,6 @@ num_features = X_all.shape[1]
 #     label_columns=['barra_fluxo'])
 
 
-
 # MAX_EPOCHS = 150
 
 # def compile_and_fit(model: xgboost.XGBRegressor, window, modelo, patience=3):
@@ -422,13 +471,12 @@ num_features = X_all.shape[1]
 #   # model.compile(loss=tf.losses.MeanAbsoluteError(),
 #   #               optimizer=tf.optimizers.RMSprop(),
 #   #               metrics=[tf.metrics.MeanAbsoluteError()])
-  
+
 #   log_dir = "./logs/Logs_TensorBoard_Wit/Neural_jan_2022/" +  modelo +  '_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-  
+
 #   history = model.fit(*window.train,
 #                       callbacks=[early_stopping,tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)])
 #   return history
-
 
 
 # CONV_WIDTH = 3
@@ -437,7 +485,6 @@ num_features = X_all.shape[1]
 #     label_width=1,
 #     shift=1,
 #     label_columns=['barra_fluxo'])
-
 
 
 # LABEL_WIDTH = 12
@@ -486,9 +533,8 @@ num_features = X_all.shape[1]
 # multi_performance['Repeat'] = repeat_baseline.evaluate(multi_window.test, verbose=0)
 
 
-
 ####################################################
-# import csv 
+# import csv
 
 # combs = []
 
@@ -523,7 +569,7 @@ num_features = X_all.shape[1]
 #                                     label_width=OUT_STEPS,
 #                                     shift=OUT_STEPS)
 
-        
+
 #         # multi_conv_model = tf.keras.Sequential([
 #         #     tf.keras.layers.Lambda(lambda x: x[:, -OUT_STEPS:, :]),
 #         #     tf.keras.layers.Conv1D(64, activation='relu', kernel_size=(OUT_STEPS)),
@@ -545,15 +591,15 @@ num_features = X_all.shape[1]
 #         IPython.display.clear_output()
 
 #         multi_val_performance['XGBoost'] = xgb_model.predict(multi_window.val)
-        
+
 #         times.append(end-start)
 #         mae.append(multi_val_performance['XGBoost'])
 
 #         attempt += 1
-    
+
 #     time1,time2,time3 = times[0],times[1],times[2]
 #     mae1,mae2,mae3 = mae[0],mae[1],mae[2]
-    
+
 #     with open('resultados_barra_CNN_novo.csv', mode='a') as res:
 #         writer = csv.writer(res, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 #         writer.writerow( [input_width, OUT_STEPS, mae1, mae2, mae3, time1, time2, time3] )
@@ -563,30 +609,66 @@ num_features = X_all.shape[1]
 # val_df = X_all[int(n*0.7):int(n*0.9)]
 # test_df = X_all[int(n*0.9):]
 
-X_train = data[0:int(n*0.07)]
-y_train = label[0:int(n*0.07)]
-X_val = data[int(n*0.7):int(n*0.9)]
-y_val = label[int(n*0.7):int(n*0.9)]
+
+X_train = data[0 : int(n * 0.001)]
+y_train = label[0 : int(n * 0.001)]
+X_val = data[int(n * 0.7) : int(n * 0.9)]
+y_val = label[int(n * 0.7) : int(n * 0.9)]
 dval = xgboost.DMatrix(X_val, label=y_val)
-X_teste = data[int(n*0.9):]
-y_teste = label[int(n*0.9):]
+X_teste = data[int(n * 0.9) :]
+y_teste = label[int(n * 0.9) :]
 dteste = xgboost.DMatrix(X_teste, y_teste)
 
-num_boost_round = int(sys.argv[1])
-taxa_de_aprendizado = float(sys.argv[2])
-profundidado_maxima = int(sys.argv[3])
 # numero_arvores = int(sys.argv[4])
 
 STEP_SIZE = 6
-params = {
-    "objective": "reg:squarederror",
-    "eta": taxa_de_aprendizado,
-    "eval_metric": "mae",
-    "max_depth": profundidado_maxima,
-    # "n_estimators": numero_arvores
-}
 
-def resultados(modelo, conjunto_X, conjunto_y, usar_dmatrix=True):
+classificadores = ["xgbtrain_6em6", "xgbtrain_tudo", "xgbr_6em6", "xgbr_tudo"]
+
+params = {
+    nome: {
+        "objective": "reg:squarederror",
+        "eval_metric": "mae",
+    }
+    for nome in classificadores
+}
+if argumentos.validacao:
+    for nome in classificadores:
+        params[nome]["eta"] = argumentos.taxa_de_aprendizado
+        params[nome]["max_depth"] = argumentos.profundidado_maxima
+        params[nome]["num_boost_round"] = argumentos.num_boost_round
+else:
+    with open(
+        f"{salvar_resultados.CAMINHO_RESULTADOS}/{argumentos.label}.json", "r"
+    ) as file:
+        res_lista = json.load(file)
+        melhores_mae = {nome: float("inf") for nome in classificadores}
+        for res in res_lista:
+            for nome in classificadores:
+                if res[nome] < melhores_mae[nome]:
+                    params[nome]["eta"] = argumentos.taxa_de_aprendizado
+                    params[nome]["max_depth"] = argumentos.profundidado_maxima
+                    params[nome]["num_boost_round"] = argumentos.num_boost_round
+                    melhores_mae[nome] = res[nome]
+
+
+resultados = {}
+
+
+def gerar_resultados_validacao(modelo, conjunto_X, conjunto_y, nome, usar_dmatrix=True):
+    y_pred = None
+    if usar_dmatrix:
+        dconjuntox = xgboost.DMatrix(conjunto_X)
+        y_pred = modelo.predict(dconjuntox)
+    else:
+        y_pred = modelo.predict(conjunto_X)
+
+    resultados[nome] = mean_absolute_error(conjunto_y, y_pred)
+
+
+def gerar_resultados(
+    modelo, conjunto_X, conjunto_y, nome, tempo_train, usar_dmatrix=True
+):
     tempo_inicio = time.time()
     y_pred = None
     if usar_dmatrix:
@@ -594,99 +676,143 @@ def resultados(modelo, conjunto_X, conjunto_y, usar_dmatrix=True):
         y_pred = modelo.predict(dconjuntox)
     else:
         y_pred = modelo.predict(conjunto_X)
-    mae = mean_absolute_error(conjunto_y, y_pred) # 11.935
-    mse = mean_squared_error(conjunto_y, y_pred)  # 337.377
-    rmse = np.sqrt(mse)                       # 18.367
-    r2 = r2_score(conjunto_y, y_pred)             # 0.22874
     tempo_teste = time.time() - tempo_inicio
 
-    print(f"MAE: {mae}")
-    print(f"MSE: {mse}")
-    print(f"RMSE: {rmse}")
-    print(f"R2: {r2}")
-    print(f"TEMPO TESTE: {tempo_teste} s")
-  
+    mse = mean_squared_error(conjunto_y, y_pred)
+    resultados = {
+        "mae": mean_absolute_error(conjunto_y, y_pred),
+        "mse": mse,
+        "rmse": np.sqrt(mse),
+        "r2": r2_score(conjunto_y, y_pred),
+        "tempo_train": tempo_train,
+        "tempo_teste": tempo_teste,
+        "tempo_total": tempo_train + tempo_teste,
+    }
 
-print("="*100)
+    for chave, valor in resultados.items():
+        print(chave.capitalize().replace("_", " ") + f" : {valor}")
+    salvar_resultados.salvar_resultados(resultados, nome)
+
+
+print("=" * 100)
 print(str(params))
 
 ####################################################################
 
-print("="*50)
+print("=" * 50)
 print("xgb.train de 6 em 6")
 
 i_train = 0
 classificador = None
 tempo_inicio = time.time()
 while i_train < X_train.shape[0]:
-#   print(f"{i_train}/{X_train.shape[0]}", end="\r")
-  ultimo_indice = i_train + STEP_SIZE
-  if ultimo_indice >= X_train.shape[0]:
-    ultimo_indice = X_train.shape[0] - 1
-  dtrain = xgboost.DMatrix(X_train[i_train:ultimo_indice], label=y_train[i_train:ultimo_indice])
-  classificador = xgboost.train(params,dtrain=dtrain, num_boost_round=num_boost_round, xgb_model=classificador)
-  i_train = ultimo_indice + 1
+    #   print(f"{i_train}/{X_train.shape[0]}", end="\r")
+    ultimo_indice = i_train + STEP_SIZE
+    if ultimo_indice >= X_train.shape[0]:
+        ultimo_indice = X_train.shape[0] - 1
+    dtrain = xgboost.DMatrix(
+        X_train[i_train:ultimo_indice], label=y_train[i_train:ultimo_indice]
+    )
+    classificador = xgboost.train(
+        params["xgbtrain_6em6"],
+        dtrain=dtrain,
+        num_boost_round=params["xgbtrain_6em6"]["num_boost_round"],
+        xgb_model=classificador,
+    )
+    i_train = ultimo_indice + 1
 tempo_execucao = time.time() - tempo_inicio
 
 print(f"TEMPO TREINAMENTO: {tempo_execucao} s")
 
-print("Validação")
-resultados(classificador, X_val, y_val)
-print("Teste")
-resultados(classificador, X_teste, y_teste)
+if argumentos.validacao:
+    print("Validação")
+    gerar_resultados_validacao(classificador, X_val, y_val, "xgbtrain_6em6")
+else:
+    print("Teste")
+    gerar_resultados(classificador, X_teste, y_teste, "xgbtrain_6em6", tempo_execucao)
+# print("Teste")
+# resultados(classificador, X_teste, y_teste, tempo_execucao, "xgbtrain_6em6")
 
 ####################################################################
 
-print("="*50)
+print("=" * 50)
 print("xgb.train tudo de uma vez só")
 
 dtrain = xgboost.DMatrix(X_train, label=y_train)
 tempo_inicio = time.time()
-classificador = xgboost.train(params,dtrain=dtrain, num_boost_round=num_boost_round, xgb_model=classificador)
+classificador = xgboost.train(
+    params["xgbtrain_tudo"],
+    dtrain=dtrain,
+    num_boost_round=params["xgbtrain_6em6"]["num_boost_round"],
+    xgb_model=classificador,
+)
 tempo_execucao = time.time() - tempo_inicio
 
 print(f"TEMPO TREINAMENTO: {tempo_execucao} s")
-print("Validação")
-resultados(classificador, X_val, y_val)
-print("Teste")
-resultados(classificador, X_teste, y_teste)
+if argumentos.validacao:
+    print("Validação")
+    gerar_resultados_validacao(classificador, X_val, y_val, "xgbtrain_tudo")
+else:
+    print("Teste")
+    gerar_resultados(classificador, X_teste, y_teste, "xgbtrain_tudo", tempo_execucao)
+# print("Teste")
+# resultados(classificador, X_teste, y_teste, tempo_execucao, "xgbtrain_tudo")
 
 ####################################################################
 
-print("="*50)
+print("=" * 50)
 print("XGBRegressor de 6 em 6")
 
 i_train = 0
-classificador = xgboost.XGBRegressor(**params)
+classificador = xgboost.XGBRegressor(**params["xgbr_6em6"])
 tempo_inicio = time.time()
 while i_train < X_train.shape[0]:
-#   print(f"{i_train}/{X_train.shape[0]}", end="\r")
-  ultimo_indice = i_train + STEP_SIZE
-  if ultimo_indice >= X_train.shape[0]:
-    ultimo_indice = X_train.shape[0] - 1
-  classificador.fit(X_train[i_train:ultimo_indice], y_train[i_train:ultimo_indice], xgb_model=classificador.booster)
-  i_train = ultimo_indice + 1
+    #   print(f"{i_train}/{X_train.shape[0]}", end="\r")
+    ultimo_indice = i_train + STEP_SIZE
+    if ultimo_indice >= X_train.shape[0]:
+        ultimo_indice = X_train.shape[0] - 1
+    classificador.fit(
+        X_train[i_train:ultimo_indice],
+        y_train[i_train:ultimo_indice],
+        xgb_model=classificador.booster,
+    )
+    i_train = ultimo_indice + 1
 tempo_execucao = time.time() - tempo_inicio
 
 print(f"TEMPO TREINAMENTO: {tempo_execucao} s")
 
-print("Validação")
-resultados(classificador, X_val, y_val, False)
-print("Teste")
-resultados(classificador, X_teste, y_teste, False)
+if argumentos.validacao:
+    print("Validação")
+    gerar_resultados_validacao(
+        classificador, X_val, y_val, "xgbr_6em6", usar_dmatrix=False
+    )
+else:
+    print("Teste")
+    gerar_resultados(
+        classificador, X_teste, y_teste, "xgbr_6em6", tempo_execucao, usar_dmatrix=False
+    )
+# print("Teste")
+# resultados(classificador, X_teste, y_teste, tempo_execucao, "xgbr_6em6", False)
 
 ####################################################################
 
-print("="*50)
+print("=" * 50)
 print("XGBRegressor tudo de uma vez só")
 
 tempo_inicio = time.time()
-classificador = xgboost.XGBRegressor(**params)
+classificador = xgboost.XGBRegressor(**params["xgbr_tudo"])
 classificador.fit(X_train, y_train)
 tempo_execucao = time.time() - tempo_inicio
 
 print(f"TEMPO TREINAMENTO: {tempo_execucao} s")
-print("Validação")
-resultados(classificador, X_val, y_val, False)
-print("Teste")
-resultados(classificador, X_teste, y_teste, False)
+if argumentos.validacao:
+    print("Validação")
+    gerar_resultados_validacao(classificador, X_val, y_val, "xgbr_tudo", False)
+else:
+    print("Teste")
+    gerar_resultados(
+        classificador, X_teste, y_teste, "xgbr_tudo", tempo_execucao, usar_dmatrix=False
+    )
+
+if argumentos.validacao:
+    salvar_resultados.salvar_resultados_validacao(resultados)
