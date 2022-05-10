@@ -610,8 +610,8 @@ n = len(X_all)
 # test_df = X_all[int(n*0.9):]
 
 
-X_train = data[0 : int(n * 0.001)]
-y_train = label[0 : int(n * 0.001)]
+X_train = data[0 : int(n * 0.7)]
+y_train = label[0 : int(n * 0.7)]
 X_val = data[int(n * 0.7) : int(n * 0.9)]
 y_val = label[int(n * 0.7) : int(n * 0.9)]
 dval = xgboost.DMatrix(X_val, label=y_val)
@@ -646,9 +646,9 @@ else:
         for res in res_lista:
             for nome in classificadores:
                 if res[nome] < melhores_mae[nome]:
-                    params[nome]["eta"] = argumentos.taxa_de_aprendizado
-                    params[nome]["max_depth"] = argumentos.profundidado_maxima
-                    params[nome]["num_boost_round"] = argumentos.num_boost_round
+                    params[nome]["eta"] = res["taxa_de_aprendizado"]
+                    params[nome]["max_depth"] = res["profundidade_maxima"]
+                    params[nome]["num_boost_round"] = res["num_boost_round"]
                     melhores_mae[nome] = res[nome]
 
 
