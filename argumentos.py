@@ -6,6 +6,10 @@ profundidado_maxima = int(sys.argv[3])
 label = sys.argv[4]
 iteracao = int(sys.argv[5])
 validacao = "--validacao" in sys.argv
+nao_executar_xgbtrain_6em6 = "--nexec-xgbtrain-6em6" in sys.argv
+nao_executar_xgbtrain_tudo = "--nexec-xgbtrain-tudo" in sys.argv
+nao_executar_xgbreg_6em6 = "--nexec-xgbreg-6em6" in sys.argv
+nao_executar_xgbreg_tudo = "--nexec-xgbreg-tudo" in sys.argv
 
 hiperparametros = {
     "num_boost_round": num_boost_round,

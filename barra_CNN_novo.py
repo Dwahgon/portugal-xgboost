@@ -701,120 +701,132 @@ print(str(params))
 
 ####################################################################
 
-print("=" * 50)
-print("xgb.train de 6 em 6")
+if not argumentos.nao_executar_xgbtrain_6em6:
+    print("=" * 50)
+    print("xgb.train de 6 em 6")
 
-i_train = 0
-classificador = None
-tempo_inicio = time.time()
-while i_train < X_train.shape[0]:
-    #   print(f"{i_train}/{X_train.shape[0]}", end="\r")
-    ultimo_indice = i_train + STEP_SIZE
-    if ultimo_indice >= X_train.shape[0]:
-        ultimo_indice = X_train.shape[0] - 1
-    dtrain = xgboost.DMatrix(
-        X_train[i_train:ultimo_indice], label=y_train[i_train:ultimo_indice]
-    )
+    i_train = 0
+    classificador = None
+    tempo_inicio = time.time()
+    while i_train < X_train.shape[0]:
+        #   print(f"{i_train}/{X_train.shape[0]}", end="\r")
+        ultimo_indice = i_train + STEP_SIZE
+        if ultimo_indice >= X_train.shape[0]:
+            ultimo_indice = X_train.shape[0] - 1
+        dtrain = xgboost.DMatrix(
+            X_train[i_train:ultimo_indice], label=y_train[i_train:ultimo_indice]
+        )
+        classificador = xgboost.train(
+            params["xgbtrain_6em6"],
+            dtrain=dtrain,
+            num_boost_round=params["xgbtrain_6em6"]["num_boost_round"],
+            xgb_model=classificador,
+        )
+        i_train = ultimo_indice + 1
+    tempo_execucao = time.time() - tempo_inicio
+
+    print(f"TEMPO TREINAMENTO: {tempo_execucao} s")
+
+    if argumentos.validacao:
+        print("Validação")
+        gerar_resultados_validacao(classificador, X_val, y_val, "xgbtrain_6em6")
+    else:
+        print("Teste")
+        gerar_resultados(
+            classificador, X_teste, y_teste, "xgbtrain_6em6", tempo_execucao
+        )
+
+####################################################################
+
+if not argumentos.nao_executar_xgbtrain_tudo:
+    print("=" * 50)
+    print("xgb.train tudo de uma vez só")
+
+    dtrain = xgboost.DMatrix(X_train, label=y_train)
+    tempo_inicio = time.time()
     classificador = xgboost.train(
-        params["xgbtrain_6em6"],
+        params["xgbtrain_tudo"],
         dtrain=dtrain,
         num_boost_round=params["xgbtrain_6em6"]["num_boost_round"],
         xgb_model=classificador,
     )
-    i_train = ultimo_indice + 1
-tempo_execucao = time.time() - tempo_inicio
+    tempo_execucao = time.time() - tempo_inicio
 
-print(f"TEMPO TREINAMENTO: {tempo_execucao} s")
-
-if argumentos.validacao:
-    print("Validação")
-    gerar_resultados_validacao(classificador, X_val, y_val, "xgbtrain_6em6")
-else:
-    print("Teste")
-    gerar_resultados(classificador, X_teste, y_teste, "xgbtrain_6em6", tempo_execucao)
-# print("Teste")
-# resultados(classificador, X_teste, y_teste, tempo_execucao, "xgbtrain_6em6")
+    print(f"TEMPO TREINAMENTO: {tempo_execucao} s")
+    if argumentos.validacao:
+        print("Validação")
+        gerar_resultados_validacao(classificador, X_val, y_val, "xgbtrain_tudo")
+    else:
+        print("Teste")
+        gerar_resultados(
+            classificador, X_teste, y_teste, "xgbtrain_tudo", tempo_execucao
+        )
 
 ####################################################################
 
-print("=" * 50)
-print("xgb.train tudo de uma vez só")
+if not argumentos.nao_executar_xgbreg_6em6:
+    print("=" * 50)
+    print("XGBRegressor de 6 em 6")
 
-dtrain = xgboost.DMatrix(X_train, label=y_train)
-tempo_inicio = time.time()
-classificador = xgboost.train(
-    params["xgbtrain_tudo"],
-    dtrain=dtrain,
-    num_boost_round=params["xgbtrain_6em6"]["num_boost_round"],
-    xgb_model=classificador,
-)
-tempo_execucao = time.time() - tempo_inicio
+    i_train = 0
+    classificador = xgboost.XGBRegressor(**params["xgbr_6em6"])
+    tempo_inicio = time.time()
+    while i_train < X_train.shape[0]:
+        #   print(f"{i_train}/{X_train.shape[0]}", end="\r")
+        ultimo_indice = i_train + STEP_SIZE
+        if ultimo_indice >= X_train.shape[0]:
+            ultimo_indice = X_train.shape[0] - 1
+        classificador.fit(
+            X_train[i_train:ultimo_indice],
+            y_train[i_train:ultimo_indice],
+            xgb_model=classificador.booster,
+        )
+        i_train = ultimo_indice + 1
+    tempo_execucao = time.time() - tempo_inicio
 
-print(f"TEMPO TREINAMENTO: {tempo_execucao} s")
-if argumentos.validacao:
-    print("Validação")
-    gerar_resultados_validacao(classificador, X_val, y_val, "xgbtrain_tudo")
-else:
-    print("Teste")
-    gerar_resultados(classificador, X_teste, y_teste, "xgbtrain_tudo", tempo_execucao)
-# print("Teste")
-# resultados(classificador, X_teste, y_teste, tempo_execucao, "xgbtrain_tudo")
+    print(f"TEMPO TREINAMENTO: {tempo_execucao} s")
 
-####################################################################
-
-print("=" * 50)
-print("XGBRegressor de 6 em 6")
-
-i_train = 0
-classificador = xgboost.XGBRegressor(**params["xgbr_6em6"])
-tempo_inicio = time.time()
-while i_train < X_train.shape[0]:
-    #   print(f"{i_train}/{X_train.shape[0]}", end="\r")
-    ultimo_indice = i_train + STEP_SIZE
-    if ultimo_indice >= X_train.shape[0]:
-        ultimo_indice = X_train.shape[0] - 1
-    classificador.fit(
-        X_train[i_train:ultimo_indice],
-        y_train[i_train:ultimo_indice],
-        xgb_model=classificador.booster,
-    )
-    i_train = ultimo_indice + 1
-tempo_execucao = time.time() - tempo_inicio
-
-print(f"TEMPO TREINAMENTO: {tempo_execucao} s")
-
-if argumentos.validacao:
-    print("Validação")
-    gerar_resultados_validacao(
-        classificador, X_val, y_val, "xgbr_6em6", usar_dmatrix=False
-    )
-else:
-    print("Teste")
-    gerar_resultados(
-        classificador, X_teste, y_teste, "xgbr_6em6", tempo_execucao, usar_dmatrix=False
-    )
-# print("Teste")
-# resultados(classificador, X_teste, y_teste, tempo_execucao, "xgbr_6em6", False)
+    if argumentos.validacao:
+        print("Validação")
+        gerar_resultados_validacao(
+            classificador, X_val, y_val, "xgbr_6em6", usar_dmatrix=False
+        )
+    else:
+        print("Teste")
+        gerar_resultados(
+            classificador,
+            X_teste,
+            y_teste,
+            "xgbr_6em6",
+            tempo_execucao,
+            usar_dmatrix=False,
+        )
 
 ####################################################################
 
-print("=" * 50)
-print("XGBRegressor tudo de uma vez só")
+if argumentos.nao_executar_xgbreg_tudo:
+    print("=" * 50)
+    print("XGBRegressor tudo de uma vez só")
 
-tempo_inicio = time.time()
-classificador = xgboost.XGBRegressor(**params["xgbr_tudo"])
-classificador.fit(X_train, y_train)
-tempo_execucao = time.time() - tempo_inicio
+    tempo_inicio = time.time()
+    classificador = xgboost.XGBRegressor(**params["xgbr_tudo"])
+    classificador.fit(X_train, y_train)
+    tempo_execucao = time.time() - tempo_inicio
 
-print(f"TEMPO TREINAMENTO: {tempo_execucao} s")
-if argumentos.validacao:
-    print("Validação")
-    gerar_resultados_validacao(classificador, X_val, y_val, "xgbr_tudo", False)
-else:
-    print("Teste")
-    gerar_resultados(
-        classificador, X_teste, y_teste, "xgbr_tudo", tempo_execucao, usar_dmatrix=False
-    )
+    print(f"TEMPO TREINAMENTO: {tempo_execucao} s")
+    if argumentos.validacao:
+        print("Validação")
+        gerar_resultados_validacao(classificador, X_val, y_val, "xgbr_tudo", False)
+    else:
+        print("Teste")
+        gerar_resultados(
+            classificador,
+            X_teste,
+            y_teste,
+            "xgbr_tudo",
+            tempo_execucao,
+            usar_dmatrix=False,
+        )
 
 if argumentos.validacao:
     salvar_resultados.salvar_resultados_validacao(resultados)
