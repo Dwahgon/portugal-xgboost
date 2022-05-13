@@ -1,3 +1,6 @@
 .env/
 logs/
 resultados_barra_CNN_novo.csv
+resultados/
+__pycache__
+.vscode/
