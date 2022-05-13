@@ -635,6 +635,7 @@ params = {
 if argumentos.validacao:
     for nome in classificadores:
         params[nome]["eta"] = argumentos.taxa_de_aprendizado
+        params[nome]["learning_rate"] = argumentos.taxa_de_aprendizado
         params[nome]["max_depth"] = argumentos.profundidado_maxima
         params[nome]["num_boost_round"] = argumentos.num_boost_round
 else:
@@ -647,6 +648,7 @@ else:
             for nome in classificadores:
                 if res[nome] < melhores_mae[nome]:
                     params[nome]["eta"] = res["taxa_de_aprendizado"]
+                    params[nome]["learning_rate"] = res["taxa_de_aprendizado"]
                     params[nome]["max_depth"] = res["profundidade_maxima"]
                     params[nome]["num_boost_round"] = res["num_boost_round"]
                     melhores_mae[nome] = res[nome]
