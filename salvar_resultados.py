@@ -1,7 +1,7 @@
 import os
 
 import pandas as pd
-import argumentos
+from analisador_argumentos import argumentos, hiperparametros
 import json
 
 
@@ -22,7 +22,7 @@ COLUNAS = [
 
 def salvar_resultados(resultados, nome_classificador):
     caminho_resultado = (
-        f"{CAMINHO_RESULTADOS}/{nome_classificador}_{argumentos.label}.csv"
+        f"{CAMINHO_RESULTADOS}/{nome_classificador}_{argumentos.rotulo}.csv"
     )
     # Carregar csv
     dados_csv = {}
@@ -42,14 +42,14 @@ def salvar_resultados(resultados, nome_classificador):
 
 
 def salvar_resultados_validacao(resultados):
-    caminho_resultado = f"{CAMINHO_RESULTADOS}/{argumentos.label}.json"
+    caminho_resultado = f"{CAMINHO_RESULTADOS}/{argumentos.rotulo}.json"
     # Carregar json
     dados_json = []
     if os.path.exists(caminho_resultado):
         with open(caminho_resultado, "r") as file:
             dados_json = json.load(file)
     registro = {}
-    for nomeh, valorh in argumentos.hiperparametros.items():
+    for nomeh, valorh in hiperparametros.items():
         registro[nomeh] = valorh
     for nomer, valorr in resultados.items():
         registro[nomer] = valorr

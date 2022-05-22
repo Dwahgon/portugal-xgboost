@@ -8,7 +8,7 @@ print("Importando")
 
 import time
 import xgboost
-import argumentos
+from analisador_argumentos import argumentos, hiperparametros
 import salvar_resultados
 import json
 
@@ -46,22 +46,22 @@ print("Lendo dataset")
 df_full = pd.read_csv("dados_UDESC.csv")
 
 # df_teste = df_full.groupby(['ano', 'mes','dia','hora'])[['barra_fluxo']].count()
-df_dia = df_full.groupby(["ano", "mes", "dia"])[[argumentos.label]].count()
+df_dia = df_full.groupby(["ano", "mes", "dia"])[[argumentos.rotulo]].count()
 
 # transformar o resultado do groupby em dataframe.
 df_fim_dia = df_dia.reset_index(level=df_dia.index.names)
 
 # alteração de nomes de colunas
-df_fim_dia.rename(columns={argumentos.label: "qtde_medidas"}, inplace=True)
+df_fim_dia.rename(columns={argumentos.rotulo: "qtde_medidas"}, inplace=True)
 
 # df_teste = df_full.groupby(['ano', 'mes','dia','hora'])[['barra_fluxo']].count()
-df_mes = df_full.groupby(["ano", "mes"])[[argumentos.label]].count()
+df_mes = df_full.groupby(["ano", "mes"])[[argumentos.rotulo]].count()
 
 # transformar o resultado do groupby em dataframe.
 df_fim_mes = df_mes.reset_index(level=df_mes.index.names)
 
 # alteração de nomes de colunas
-df_fim_mes.rename(columns={argumentos.label: "qtde_medidas"}, inplace=True)
+df_fim_mes.rename(columns={argumentos.rotulo: "qtde_medidas"}, inplace=True)
 
 ## Dados setembro 2021 completo e com as duas estacoes (aveiro e dunas)
 # colocar em variavel "numerica" somente as colunas numericas
@@ -156,7 +156,7 @@ X_cat = df_full[
 # A variável X_fluxo receberá os valores de fluxo a serem utilizados tanto para treinamento quanto para teste do modelo.
 # o DF já possui valores de fluxo calculados para as duas regiões e para os instantes de tempo t0 até t10.
 
-X_fluxo = df_full[[argumentos.label]]  # aqui significa o fluxo na barra no instante t0
+X_fluxo = df_full[[argumentos.rotulo]]  # aqui significa o fluxo na barra no instante t0
 # X_fluxo = df_full[['barra_fluxo_t1']] # aqui significa o fluxo na barra no instante t1
 # X_fluxo = df_full[['costa_fluxo_t10']]
 # X_fluxo = df_full[['barra_fluxo_t10']]
@@ -227,8 +227,8 @@ X_all = MultiColumnLabelEncoder(columns=categorical).fit_transform(X_all)
 # data=X_all.drop('barra_fluxo',axis=1)
 for cat in X_cat:
     X_all[cat].astype("category")
-label = X_all[[argumentos.label]]
-data = X_all.drop(argumentos.label, axis=1)
+label = X_all[[argumentos.rotulo]]
+data = X_all.drop(argumentos.rotulo, axis=1)
 
 # column_indices = {name: i for i, name in enumerate(X_all.columns)}
 
@@ -621,9 +621,7 @@ dteste = xgboost.DMatrix(X_teste, y_teste)
 
 # numero_arvores = int(sys.argv[4])
 
-STEP_SIZE = 6
-
-classificadores = ["xgbtrain_6em6", "xgbtrain_tudo", "xgbr_6em6", "xgbr_tudo"]
+classificadores = ["xgbtrain_iter", "xgbtrain_tudo", "xgbr_iter", "xgbr_tudo"]
 
 params = {
     nome: {
@@ -634,13 +632,13 @@ params = {
 }
 if argumentos.validacao:
     for nome in classificadores:
-        params[nome]["eta"] = argumentos.taxa_de_aprendizado
-        params[nome]["learning_rate"] = argumentos.taxa_de_aprendizado
-        params[nome]["max_depth"] = argumentos.profundidado_maxima
-        params[nome]["num_boost_round"] = argumentos.num_boost_round
+        params[nome]["eta"] = argumentos.taxa_apren
+        params[nome]["learning_rate"] = argumentos.taxa_apren
+        params[nome]["max_depth"] = argumentos.prof_max
+        params[nome]["num_boost_round"] = argumentos.num_iter_boost
 else:
     with open(
-        f"{salvar_resultados.CAMINHO_RESULTADOS}/{argumentos.label}.json", "r"
+        f"{salvar_resultados.CAMINHO_RESULTADOS}/{argumentos.rotulo}.json", "r"
     ) as file:
         res_lista = json.load(file)
         melhores_mae = {nome: float("inf") for nome in classificadores}
@@ -701,25 +699,25 @@ print(str(params))
 
 ####################################################################
 
-if not argumentos.nao_executar_xgbtrain_6em6:
+if not argumentos.nexec_xgbtrain_iter:
     print("=" * 50)
-    print("xgb.train de 6 em 6")
+    print(f"xgb.train de {argumentos.tam_passo} em {argumentos.tam_passo}")
 
     i_train = 0
     classificador = None
     tempo_inicio = time.time()
     while i_train < X_train.shape[0]:
         #   print(f"{i_train}/{X_train.shape[0]}", end="\r")
-        ultimo_indice = i_train + STEP_SIZE
+        ultimo_indice = i_train + argumentos.tam_passo
         if ultimo_indice >= X_train.shape[0]:
             ultimo_indice = X_train.shape[0] - 1
         dtrain = xgboost.DMatrix(
             X_train[i_train:ultimo_indice], label=y_train[i_train:ultimo_indice]
         )
         classificador = xgboost.train(
-            params["xgbtrain_6em6"],
+            params["xgbtrain_iter"],
             dtrain=dtrain,
-            num_boost_round=params["xgbtrain_6em6"]["num_boost_round"],
+            num_boost_round=params["xgbtrain_iter"]["num_boost_round"],
             xgb_model=classificador,
         )
         i_train = ultimo_indice + 1
@@ -729,16 +727,16 @@ if not argumentos.nao_executar_xgbtrain_6em6:
 
     if argumentos.validacao:
         print("Validação")
-        gerar_resultados_validacao(classificador, X_val, y_val, "xgbtrain_6em6")
+        gerar_resultados_validacao(classificador, X_val, y_val, "xgbtrain_iter")
     else:
         print("Teste")
         gerar_resultados(
-            classificador, X_teste, y_teste, "xgbtrain_6em6", tempo_execucao
+            classificador, X_teste, y_teste, "xgbtrain_iter", tempo_execucao
         )
 
 ####################################################################
 
-if not argumentos.nao_executar_xgbtrain_tudo:
+if not argumentos.nexec_xgbtrain_tudo:
     print("=" * 50)
     print("xgb.train tudo de uma vez só")
 
@@ -747,7 +745,7 @@ if not argumentos.nao_executar_xgbtrain_tudo:
     classificador = xgboost.train(
         params["xgbtrain_tudo"],
         dtrain=dtrain,
-        num_boost_round=params["xgbtrain_6em6"]["num_boost_round"],
+        num_boost_round=params["xgbtrain_iter"]["num_boost_round"],
         xgb_model=classificador,
     )
     tempo_execucao = time.time() - tempo_inicio
@@ -764,16 +762,16 @@ if not argumentos.nao_executar_xgbtrain_tudo:
 
 ####################################################################
 
-if not argumentos.nao_executar_xgbreg_6em6:
+if not argumentos.nexec_xgbreg_iter:
     print("=" * 50)
-    print("XGBRegressor de 6 em 6")
+    print(f"XGBRegressor de {argumentos.tam_passo} em {argumentos.tam_passo}")
 
     i_train = 0
-    classificador = xgboost.XGBRegressor(**params["xgbr_6em6"])
+    classificador = xgboost.XGBRegressor(**params["xgbr_iter"])
     tempo_inicio = time.time()
     while i_train < X_train.shape[0]:
         #   print(f"{i_train}/{X_train.shape[0]}", end="\r")
-        ultimo_indice = i_train + STEP_SIZE
+        ultimo_indice = i_train + argumentos.tam_passo
         if ultimo_indice >= X_train.shape[0]:
             ultimo_indice = X_train.shape[0] - 1
         classificador.fit(
@@ -789,7 +787,7 @@ if not argumentos.nao_executar_xgbreg_6em6:
     if argumentos.validacao:
         print("Validação")
         gerar_resultados_validacao(
-            classificador, X_val, y_val, "xgbr_6em6", usar_dmatrix=False
+            classificador, X_val, y_val, "xgbr_iter", usar_dmatrix=False
         )
     else:
         print("Teste")
@@ -797,14 +795,14 @@ if not argumentos.nao_executar_xgbreg_6em6:
             classificador,
             X_teste,
             y_teste,
-            "xgbr_6em6",
+            "xgbr_iter",
             tempo_execucao,
             usar_dmatrix=False,
         )
 
 ####################################################################
 
-if argumentos.nao_executar_xgbreg_tudo:
+if argumentos.nexec_xgbreg_tudo:
     print("=" * 50)
     print("XGBRegressor tudo de uma vez só")
 
