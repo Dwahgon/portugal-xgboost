@@ -21,9 +21,7 @@ COLUNAS = [
 
 
 def salvar_resultados(resultados, nome_classificador):
-    caminho_resultado = (
-        f"{CAMINHO_RESULTADOS}/{nome_classificador}_{argumentos.rotulo}.csv"
-    )
+    caminho_resultado = f"{CAMINHO_RESULTADOS}/{nome_classificador}_{argumentos.rotulo}_{argumentos.tam_passo}.csv"
     # Carregar csv
     dados_csv = {}
     if os.path.exists(caminho_resultado):

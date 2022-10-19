@@ -610,8 +610,8 @@ n = len(X_all)
 # test_df = X_all[int(n*0.9):]
 
 
-X_train = data[0 : int(n * 0.7)]
-y_train = label[0 : int(n * 0.7)]
+X_train = data[0 : int(n * 0.001)]
+y_train = label[0 : int(n * 0.001)]
 X_val = data[int(n * 0.7) : int(n * 0.9)]
 y_val = label[int(n * 0.7) : int(n * 0.9)]
 dval = xgboost.DMatrix(X_val, label=y_val)
@@ -694,13 +694,12 @@ def gerar_resultados(
     salvar_resultados.salvar_resultados(resultados, nome)
 
 
-print("=" * 100)
 print(str(params))
 
 ####################################################################
 
 if not argumentos.nexec_xgbtrain_iter:
-    print("=" * 50)
+    print("#" * 30)
     print(f"xgb.train de {argumentos.tam_passo} em {argumentos.tam_passo}")
 
     i_train = 0
@@ -737,17 +736,19 @@ if not argumentos.nexec_xgbtrain_iter:
 ####################################################################
 
 if not argumentos.nexec_xgbtrain_tudo:
-    print("=" * 50)
+    print("#" * 30)
     print("xgb.train tudo de uma vez só")
 
     dtrain = xgboost.DMatrix(X_train, label=y_train)
     tempo_inicio = time.time()
+    classificador = None
     classificador = xgboost.train(
         params["xgbtrain_tudo"],
         dtrain=dtrain,
         num_boost_round=params["xgbtrain_iter"]["num_boost_round"],
         xgb_model=classificador,
     )
+
     tempo_execucao = time.time() - tempo_inicio
 
     print(f"TEMPO TREINAMENTO: {tempo_execucao} s")
@@ -763,7 +764,7 @@ if not argumentos.nexec_xgbtrain_tudo:
 ####################################################################
 
 if not argumentos.nexec_xgbreg_iter:
-    print("=" * 50)
+    print("#" * 30)
     print(f"XGBRegressor de {argumentos.tam_passo} em {argumentos.tam_passo}")
 
     i_train = 0
@@ -802,8 +803,8 @@ if not argumentos.nexec_xgbreg_iter:
 
 ####################################################################
 
-if argumentos.nexec_xgbreg_tudo:
-    print("=" * 50)
+if not argumentos.nexec_xgbreg_tudo:
+    print("#" * 30)
     print("XGBRegressor tudo de uma vez só")
 
     tempo_inicio = time.time()
